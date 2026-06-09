@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat</title>
+    <style>
+        :root {
+            --bg: var(--vscode-sideBar-background); --fg: var(--vscode-sideBar-foreground, #ccc);
+            --input-bg: var(--vscode-input-background, #3c3c3c); --input-fg: var(--vscode-input-foreground, #ccc);
+            --btn-bg: var(--vscode-button-background, #0e639c); --btn-fg: var(--vscode-button-foreground, #fff);
+            --user-bg: var(--vscode-textLink-foreground, #3794ff); --ai-bg: var(--vscode-editor-background, #252526);
+            --code-bg: var(--vscode-textBlockQuote-background, #1e1e1e); --border: var(--vscode-widget-border, #474747);
+            --tool-bg: #1a2332; --tool-border: #2d4a6f; --tool-success: #4ec9b0; --tool-error: #f44747;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--vscode-font-family, -apple-system, sans-serif);
+            font-size: var(--vscode-font-size, 13px); color: var(--fg); background: var(--bg);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+        .toolbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .toolbar-title { font-weight: 600; font-size: 12px; }
+        .toolbar-actions { display: flex; gap: 4px; }
+        .tb { background: none; border: 1px solid transparent; color: var(--fg); cursor: pointer; padding: 4px 6px; border-radius: 3px; font-size: 12px; }
+        .tb:hover { background: var(--input-bg); border-color: var(--border); }
+        .messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 12px; }
+        .messages::-webkit-scrollbar { width: 6px; }
+        .messages::-webkit-scrollbar-thumb { background: rgba(121,121,121,0.4); border-radius: 3px; }
+        .msg { display: flex; flex-direction: column; max-width: 100%; }
+        .msg.user { align-items: flex-end; } .msg.assistant { align-items: flex-start; }
+        .msg-role { font-size: 11px; color: #888; margin-bottom: 3px; padding: 0 4px; }
+        .msg-content { padding: 8px 12px; border-radius: 8px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; }
+        .msg.user .msg-content { background: var(--user-bg); color: #fff; border-bottom-right-radius: 2px; }
+        .msg.assistant .msg-content { background: var(--ai-bg); border: 1px solid var(--border); border-bottom-left-radius: 2px; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; margin: 6px 0; overflow-x: auto; font-family: var(--vscode-editor-font-family, monospace); font-size: var(--vscode-editor-font-size, 12px); line-height: 1.4; position: relative; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px 4px 0 0; font-size: 11px; color: #888; }
+        .code-header + pre { border-radius: 0 0 4px 4px; margin-top: 0; }
+        .copy-btn { background: none; border: 1px solid var(--border); color: var(--fg); cursor: pointer; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+        .copy-btn:hover { background: var(--btn-bg); color: var(--btn-fg); }
+        .copy-btn.copied { color: var(--tool-success); }
+        :not(pre)>code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
+        .tool-block { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 6px; padding: 6px 10px; margin: 6px 0; font-size: 12px; }
+        .tool-block.success { border-left: 3px solid var(--tool-success); }
+        .tool-block.error { border-left: 3px solid var(--tool-error); }
+        .tool-header { color: #888; font-size: 11px; margin-bottom: 4px; }
+        .tool-name { color: var(--tool-success); font-weight: 600; }
+        .tool-args { color: #aaa; font-family: monospace; font-size: 11px; word-break: break-all; max-height: 80px; overflow: hidden; }
+        .tool-result { color: #ccc; margin-top: 4px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+        .input-area { padding: 8px 10px; border-top: 1px solid var(--border); flex-shrink: 0; }
+        .mode-bar { display: flex; gap: 4px; margin-bottom: 6px; }
+        .mode-btn { flex: 1; padding: 4px; text-align: center; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 11px; background: none; color: var(--fg); }
+        .mode-btn.active { background: var(--btn-bg); color: var(--btn-fg); border-color: var(--btn-bg); }
+        .input-row { display: flex; gap: 6px; align-items: flex-end; }
+        .input-box { flex: 1; background: var(--input-bg); border: 1px solid var(--input-bg); color: var(--input-fg); border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: inherit; resize: none; min-height: 36px; max-height: 150px; line-height: 1.4; outline: none; }
+        .input-box:focus { border-color: var(--btn-bg); }
+        .send-btn { background: var(--btn-bg); color: var(--btn-fg); border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 14px; height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; }
+        .send-btn:hover { opacity: 0.9; } .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .stop-btn { background: var(--tool-error); color: #fff; }
+        .typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+        .typing span { width: 6px; height: 6px; background: #888; border-radius: 50%; animation: t 1.2s infinite ease-in-out; }
+        .typing span:nth-child(2) { animation-delay: .2s; } .typing span:nth-child(3) { animation-delay: .4s; }
+        @keyframes t { 0%,60%,100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-6px); opacity: 1; } }
+        .empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #666; }
+        .empty-icon { font-size: 40px; opacity: .5; } .empty-text { font-size: 13px; }
+        .empty-hint { font-size: 11px; color: #555; text-align: center; line-height: 1.6; }
+        .status { font-size: 11px; color: #888; padding: 2px 8px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="toolbar-title" id="toolbar-title">🤖 AI Chat</div>
+        <div class="toolbar-actions">
+            <button class="tb" id="new-btn" title="新建对话">🗎 新建</button>
+        </div>
+    </div>
+    <div class="messages" id="messages">
+        <div class="empty" id="empty-state">
+            <div class="empty-icon">🤖</div>
+            <div class="empty-text">Local AI Copilot</div>
+            <div class="empty-hint">
+                <b>聊天模式</b> - 向 AI 提问代码问题<br>
+                <b>Agent 模式</b> - AI 可以读写文件、执行命令<br>
+                也可以选中代码后使用右键菜单
+            </div>
+        </div>
+    </div>
+    <div class="input-area">
+        <div class="mode-bar">
+            <button class="mode-btn active" id="mode-chat" onclick="setMode('chat')">💬 聊天</button>
+            <button class="mode-btn" id="mode-agent" onclick="setMode('agent')">🔧 Agent</button>
+        </div>
+        <div class="input-row">
+            <textarea class="input-box" id="input-box" placeholder="输入你的问题..." rows="1"></textarea>
+            <button class="send-btn" id="send-btn" title="发送">▶</button>
+        </div>
+    </div>
+    <script>
+    const vscode = acquireVsCodeApi();
+    const messagesEl = document.getElementById('messages');
+    const inputBox = document.getElementById('input-box');
+    const sendBtn = document.getElementById('send-btn');
+    const newBtn = document.getElementById('new-btn');
+    const titleEl = document.getElementById('toolbar-title');
+    const emptyState = document.getElementById('empty-state');
+
+    let isGenerating = false;
+    let currentAssistantEl = null;
+    let currentContent = '';
+    let currentMode = 'chat';
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('mode-chat').className = 'mode-btn' + (mode === 'chat' ? ' active' : '');
+        document.getElementById('mode-agent').className = 'mode-btn' + (mode === 'agent' ? ' active' : '');
+        inputBox.placeholder = mode === 'agent' ? '描述你要 AI 执行的任务...' : '输入你的问题...';
+        vscode.postMessage({ type: 'newChat', mode });
+        messagesEl.innerHTML = '';
+        if (emptyState) { messagesEl.appendChild(emptyState); emptyState.style.display = ''; }
+        currentContent = '';
+    }
+
+    function sendMessage() {
+        const text = inputBox.value.trim();
+        if (!text || isGenerating) return;
+        if (emptyState) emptyState.style.display = 'none';
+        addMsg('user', text);
+        inputBox.value = '';
+        autoResize();
+        isGenerating = true;
+        sendBtn.className = 'send-btn stop-btn';
+        sendBtn.textContent = '⏹';
+        vscode.postMessage({ type: 'sendMessage', content: text, mode: currentMode });
+    }
+
+    function addMsg(role, content, rawHtml) {
+        const d = document.createElement('div');
+        d.className = `msg ${role}`;
+        const r = document.createElement('div');
+        r.className = 'msg-role';
+        r.textContent = role === 'user' ? '你' : (currentMode === 'agent' ? '🤖 Agent' : 'AI');
+        const c = document.createElement('div');
+        c.className = 'msg-content';
+        if (rawHtml) c.innerHTML = rawHtml; else c.textContent = content;
+        d.appendChild(r); d.appendChild(c);
+        messagesEl.appendChild(d);
+        scrollBottom();
+        return c;
+    }
+
+    function addToolBlock(name, args, result, isError) {
+        const d = document.createElement('div');
+        d.className = 'tool-block ' + (isError ? 'error' : 'success');
+        let argsStr = '';
+        try { argsStr = JSON.stringify(args, null, 2); } catch { argsStr = String(args); }
+        d.innerHTML = `<div class="tool-header">🔧 <span class="tool-name">${name}</span></div>` +
+            (argsStr && argsStr !== '{}' ? `<div class="tool-args">${escHtml(argsStr.substring(0, 300))}</div>` : '') +
+            (result ? `<div class="tool-result">${escHtml(result.substring(0, 1000))}</div>` : '');
+        messagesEl.appendChild(d);
+        scrollBottom();
+    }
+
+    function startAssistant() {
+        currentContent = '';
+        currentAssistantEl = addMsg('assistant', '');
+        currentAssistantEl.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    }
+
+    function updateAssistant(text) {
+        currentContent += text;
+        if (currentAssistantEl) {
+            currentAssistantEl.innerHTML = renderMd(currentContent);
+            scrollBottom();
+        }
+    }
+
+    function finishAssistant() {
+        isGenerating = false;
+        sendBtn.className = 'send-btn';
+        sendBtn.textContent = '▶';
+        currentAssistantEl = null;
+        currentContent = '';
+    }
+
+    function renderMd(text) {
+        let h = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        h = h.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+            const id = 'c' + Math.random().toString(36).substr(2,9);
+            return `<div class="code-header"><span>${lang||'code'}</span><button class="copy-btn" onclick="copyCode('${id}')" id="b-${id}">复制</button></div><pre id="${id}"><code>${code.trim()}</code></pre>`;
+        });
+        h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+        h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        h = h.replace(/\n/g, '<br>');
+        return h;
+    }
+
+    function copyCode(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        navigator.clipboard.writeText(el.textContent).then(() => {
+            const b = document.getElementById('b-' + id);
+            if (b) { b.textContent = '已复制'; b.classList.add('copied'); setTimeout(() => { b.textContent = '复制'; b.classList.remove('copied'); }, 2000); }
+            vscode.postMessage({ type: 'insertCode', code: el.textContent });
+        });
+    }
+
+    function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function autoResize() { inputBox.style.height = 'auto'; inputBox.style.height = Math.min(inputBox.scrollHeight, 150) + 'px'; }
+    function scrollBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+    sendBtn.addEventListener('click', () => {
+        if (isGenerating) { vscode.postMessage({ type: 'stopGeneration' }); }
+        else sendMessage();
+    });
+    inputBox.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+    inputBox.addEventListener('input', autoResize);
+    newBtn.addEventListener('click', () => setMode(currentMode));
+
+    window.addEventListener('message', event => {
+        const m = event.data;
+        switch (m.type) {
+            case 'assistantStart': startAssistant(); break;
+            case 'assistantChunk': updateAssistant(m.content); break;
+            case 'assistantDone': finishAssistant(); break;
+            case 'toolUse': addToolBlock(m.name, m.args, null, false); break;
+            case 'toolResult': addToolBlock(m.name, null, m.result, m.isError); break;
+            case 'modelInfo':
+                titleEl.textContent = `🤖 ${m.model} (${m.provider})`;
+                if (!m.enableAgent) { document.getElementById('mode-agent').style.opacity = '0.5'; }
+                break;
+            case 'error': finishAssistant(); addMsg('assistant', '⚠️ ' + m.content); break;
+            case 'statusUpdate': {
+                const s = document.createElement('div');
+                s.className = 'status'; s.textContent = m.text;
+                messagesEl.appendChild(s); scrollBottom();
+                break;
+            }
+            case 'predefined':
+                if (emptyState) emptyState.style.display = 'none';
+                addMsg('user', m.content);
+                isGenerating = true;
+                sendBtn.className = 'send-btn stop-btn';
+                sendBtn.textContent = '⏹';
+                currentMode = 'chat';
+                vscode.postMessage({ type: 'sendMessage', content: m.content, mode: 'chat' });
+                break;
+        }
+    });
+
+    vscode.postMessage({ type: 'init' });
+    </script>
+</body>
+</html>

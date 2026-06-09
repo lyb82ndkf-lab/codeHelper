@@ -1,0 +1,37 @@
+<!-- test.html - HTML 测试文件（包含错误） -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试页面</title>
+    <!-- 错误1: 缺少 meta charset -->
+    <!-- 错误2: 缺少 viewport meta -->
+</head>
+<body>
+    <!-- 错误3: img 缺少 alt 属性 -->
+    <img src="photo.jpg">
+
+    <!-- 错误4: 嵌套错误 - p 不能包含 div -->
+    <p>
+        <div>内容</div>
+    </p>
+
+    <!-- 错误5: label 没有关联 input -->
+    <label>用户名</label>
+    <input type="text">
+
+    <!-- 错误6: 表单缺少 action -->
+    <form method="post">
+        <input type="text" name="username">
+        <button type="submit">提交</button>
+    </form>
+
+    <!-- 错误7: 内联样式过多 -->
+    <div style="color:red;font-size:16px;margin:10px;padding:5px;border:1px solid #ccc;">
+        这个元素有太多内联样式
+    </div>
+
+    <!-- 错误8: script 放在 head 没有 defer -->
+    <script src="app.js"></script>
+</body>
+</html>

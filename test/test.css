@@ -1,0 +1,50 @@
+/* test.css - CSS 测试文件（包含错误） */
+
+/* 错误1: 选择器 specificity 冲突 */
+#header .title { color: red; }
+.header .title { color: blue; } /* 被 # 覆盖 */
+
+/* 错误2: 缺少单位 */
+element {
+    width: 100;      /* 缺少 px 或 % */
+    margin: 10 auto; /* 混合使用 */
+    font-size: 16;   /* 缺少 px/em/rem */
+}
+
+/* 错误3: 浮动未清除 */
+.float-left {
+    float: left;
+    width: 50%;
+}
+.container {
+    /* 缺少 clearfix 或 overflow: hidden */
+}
+
+/* 错误4: z-index 在非定位元素上 */
+.badge {
+    z-index: 1000; /* 对 static 元素无效 */
+    background: red;
+}
+
+/* 错误5: 颜色透明度语法过时 */
+.overlay {
+    background: rgba(0, 0, 0, 0.5); /* 正确但可以简化 */
+    color: rgba(255, 255, 255, 1);  /* 不需要 rgba，直接用 #fff */
+}
+
+/* 错误6: 缺少 cursor: pointer */
+.clickable {
+    /* 应该加 cursor: pointer */
+    padding: 10px;
+    background: #0066cc;
+    color: white;
+}
+
+/* 错误7: 盒模型问题 */
+.box {
+    width: 100%;
+    padding: 20px;
+    border: 5px solid black;
+    /* 总宽度 = 100% + 40px + 10px，会溢出 */
+    /* 应该用 box-sizing: border-box */
+}

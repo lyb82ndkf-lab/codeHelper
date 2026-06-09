@@ -1,0 +1,86 @@
+{
+  "name": "codehelper",
+  "displayName": "CodeHelper",
+  "description": "AI 编程助手 - 支持多 Provider + Agent 工具调用",
+  "version": "2.2.0",
+  "publisher": "local-user",
+  "engines": { "vscode": "^1.85.0" },
+  "activationEvents": ["onStartupFinished", "onView:codeHelper.chatView"],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild",
+    "esbuild": "node esbuild.js",
+    "watch": "node esbuild.js --watch"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0",
+    "esbuild": "^0.19.0"
+  },
+  "contributes": {
+    "commands": [
+      { "command": "codeHelper.openChat", "title": "CodeHelper: 打开聊天面板" },
+      { "command": "codeHelper.newChat", "title": "CodeHelper: 新建对话" },
+      { "command": "codeHelper.explainCode", "title": "CodeHelper: 解释代码" },
+      { "command": "codeHelper.fixCode", "title": "CodeHelper: 修复代码" },
+      { "command": "codeHelper.optimizeCode", "title": "CodeHelper: 优化代码" },
+      { "command": "codeHelper.addComments", "title": "CodeHelper: 添加注释" },
+      { "command": "codeHelper.diagnoseError", "title": "CodeHelper: 诊断此错误" },
+      { "command": "codeHelper.acceptSuggestion", "title": "CodeHelper: 接受建议" },
+      { "command": "codeHelper.rejectSuggestion", "title": "CodeHelper: 拒绝建议" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "codeHelper", "title": "CodeHelper", "icon": "$(tools)" }
+      ]
+    },
+    "views": {
+      "codeHelper": [
+        {
+          "type": "webview",
+          "id": "codeHelper.chatView",
+          "name": "CodeHelper"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodeHelper",
+      "properties": {
+        "codeHelper.provider": {
+          "type": "string", "default": "ollama",
+          "enum": ["ollama", "openai", "anthropic", "custom"],
+          "enumDescriptions": ["本地 Ollama 服务", "OpenAI 官方 API", "Anthropic Claude API", "自定义 OpenAI 兼容地址"],
+          "description": "AI 服务提供商"
+        },
+        "codeHelper.apiKey": { "type": "string", "default": "", "description": "API Key" },
+        "codeHelper.apiBaseUrl": { "type": "string", "default": "", "description": "自定义 API 地址" },
+        "codeHelper.ollamaUrl": { "type": "string", "default": "http://localhost:11434", "description": "Ollama 地址" },
+        "codeHelper.completionModel": { "type": "string", "default": "qwen2.5-coder:3b", "description": "补全模型" },
+        "codeHelper.chatModel": { "type": "string", "default": "qwen2.5:3b", "description": "聊天模型" },
+        "codeHelper.enableCompletion": { "type": "boolean", "default": true, "description": "启用代码补全" },
+        "codeHelper.completionDelay": { "type": "number", "default": 300, "description": "补全延迟(ms)" },
+        "codeHelper.maxTokens": { "type": "number", "default": 8192, "description": "最大 token 数" },
+        "codeHelper.temperature": { "type": "number", "default": 0.2, "description": "温度" },
+        "codeHelper.contextLines": { "type": "number", "default": 100, "description": "补全上下文行数" },
+        "codeHelper.enableAutoTrigger": { "type": "boolean", "default": true, "description": "自动触发补全" },
+        "codeHelper.enableAgent": { "type": "boolean", "default": true, "description": "启用 Agent 模式" },
+        "codeHelper.maxAgentTurns": { "type": "number", "default": 20, "description": "Agent 最大轮次" }
+      }
+    },
+    "keybindings": [
+      { "command": "editor.action.inlineSuggest.commit", "key": "tab", "when": "inlineSuggestionVisible && !editorTabMovesFocus" },
+      { "command": "editor.action.inlineSuggest.hide", "key": "escape", "when": "inlineSuggestionVisible" },
+      { "command": "codeHelper.acceptSuggestion", "key": "tab", "when": "editorTextFocus && codeHelperSuggestionActive && !inlineSuggestionVisible" },
+      { "command": "codeHelper.rejectSuggestion", "key": "escape", "when": "editorTextFocus && codeHelperSuggestionActive && !inlineSuggestionVisible" }
+    ],
+    "menus": {
+      "editor/context": [
+        { "command": "codeHelper.explainCode", "when": "editorHasSelection", "group": "codeHelper@1" },
+        { "command": "codeHelper.fixCode", "when": "editorHasSelection", "group": "codeHelper@2" },
+        { "command": "codeHelper.optimizeCode", "when": "editorHasSelection", "group": "codeHelper@3" },
+        { "command": "codeHelper.addComments", "when": "editorHasSelection", "group": "codeHelper@4" },
+        { "command": "codeHelper.diagnoseError", "group": "codeHelper@5" }
+      ]
+    }
+  }
+}
